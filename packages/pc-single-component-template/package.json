@@ -1,0 +1,36 @@
+{
+  "name": "@cms-template/pc-single-component-template",
+  "version": "0.0.1",
+  "description": "fie 4.0 react 单组件模板",
+  "keywords": [
+    "ice",
+    "react",
+    "component"
+  ],
+  "license": "MIT",
+  "main": "lib/index.js",
+  "module": "es/index.js",
+  "files": [
+    "projectTemplate/"
+  ],
+  "scripts": {
+    "eslint": "eslint --cache --ext .js,.jsx ./",
+    "eslint:fix": "npm run eslint -- --fix",
+    "f2elint-fix": "f2elint fix",
+    "f2elint-scan": "f2elint scan",
+    "lint": "npm run eslint && npm run stylelint",
+    "stylelint": "stylelint \"**/*.{css,scss,less}\""
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "peerDependencies": {},
+  "publishConfig": {
+    "access": "public"
+  },
+  "componentConfig": {
+    "name": "ExampleComponent",
+    "title": "demo component",
+    "category": "Information"
+  },
+  "stylePath": "style.js"
+}
