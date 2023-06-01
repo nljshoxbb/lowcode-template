@@ -1,0 +1,10 @@
+# packages:
+# - "packages/lowcode-template-editor"
+# - "packages/lowcode-template-plugin"
+# - "packages/lowcode-template-setter"
+# - "packages/mobile-multiple-component-template"
+# - "packages/mobile-single-component-template"
+# - "packages/pc-multiple-component-template"
+# - "packages/pc-single-component-template"
+packages:
+  - "packages/*"
