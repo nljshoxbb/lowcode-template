@@ -44,8 +44,8 @@ async function syncPackageInfo() {
   const postData = JSON.stringify(data);
   const request = http.request(
     {
-      hostname: '172.253.93.84',
-      port: 3300,
+      hostname: 'localhost',
+      port: 3200,
       path: '/v1/package/sync',
       method: 'POST',
       headers: {
