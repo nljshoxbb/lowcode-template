@@ -1,18 +1,102 @@
 const childProcess = require('child_process');
 const package = require('./package.json');
-const http = require('http');
+const config = require("./publishSyncrc")
+const archiver = require('archiver');
+const fs = require("fs")
+const fetch = require("node-fetch").default
+const FormData = require('form-data');
 
-console.log('========== npm publish start ==========');
 const npmCMD = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const child = childProcess.spawnSync(npmCMD, ['publish'], {
-  cwd: process.cwd(),
-  stdio: 'inherit',
-  encoding: 'utf-8',
-});
 
-console.log('========== npm publish end ==========');
+const wrapLog = (msg) => {
+  console.log(`========== ${msg} ==========`)
+}
 
-console.log('exit code: ', child.status);
+const handlePublish = () => {
+  wrapLog(`npm publish start`)
+  const child = childProcess.spawnSync(npmCMD, ['publish'], {
+    cwd: process.cwd(),
+    stdio: 'inherit',
+    encoding: 'utf-8',
+  });
+
+  wrapLog(`npm publish end`)
+  wrapLog(`xit code:  ${child.status}`)
+
+  return child.status
+}
+
+function buildDoc() {
+  const child = childProcess.spawnSync(npmCMD, ['run', 'build'], {
+    cwd: process.cwd(),
+    stdio: 'inherit',
+    encoding: 'utf-8',
+  });
+  return child.status;
+}
+
+function zipDoc() {
+  return new Promise((resolve, reject) => {
+    const output = fs.createWriteStream(`${__dirname}/${config.zipName}.zip`);
+    const archive = archiver('zip', {
+      zlib: { level: 9 } // Sets the compression level.
+    });
+    output.on('close', () => {
+      console.log('archiver has been finalized and the output file descriptor has closed.');
+      resolve(true)
+    });
+    output.on('end', () => {
+      console.log('Data has been drained');
+      resolve(true)
+    });
+    archive.pipe(output);
+    archive.directory(config.zipSrc, false);
+    archive.finalize();
+  })
+}
+
+async function uploadDoc(packageId) {
+  if (!packageId) {
+    wrapLog("upload docs fail")
+    return;
+  }
+  const formData = new FormData()
+
+  formData.append('file', fs.readFileSync(`./${config.zipName}.zip`), {
+    contentType: 'application/zip',
+    name: 'file',
+    filename: `${config.zipName}.zip`,
+  });
+
+  formData.append("package_id", packageId);
+  formData.append("app_auth_token", '');
+
+  try {
+    wrapLog("upload doc start")
+    const response = await fetch(config.api.upload.path, {
+      method: config.api.upload.method,
+      body: formData,
+      headers: formData.getHeaders(),
+    })
+    const resData = await response.json();
+    console.log(resData);
+    wrapLog("upload doc end")
+  } catch (error) {
+    console.log(error)
+  }
+
+}
+
+function buildLowcode() {
+
+  const child = childProcess.spawnSync(npmCMD, ['run', 'lowcode:build'], {
+    cwd: process.cwd(),
+    stdio: 'inherit',
+    encoding: 'utf-8',
+  });
+  return child.status
+
+}
 
 function getUserName() {
   return new Promise((resovle, reject) => {
@@ -20,7 +104,7 @@ function getUserName() {
       const childP = childProcess.spawnSync(npmCMD, ['config', 'ls'], {
         encoding: 'utf-8',
       });
-      scriptOutput = childP.output.toString();
+      const scriptOutput = childP.output.toString();
       let username = '';
       scriptOutput.replace(/:\s*username\s*=\s*"((?:[^"]|"")*)"/g, (match, $1) => {
         username = $1;
@@ -33,7 +117,8 @@ function getUserName() {
 }
 
 async function syncPackageInfo() {
-  console.log('========== sync info start ==========');
+  wrapLog("sync package info start")
+
   const username = await getUserName();
   const data = {
     name: package.name,
@@ -41,36 +126,48 @@ async function syncPackageInfo() {
     creator: username,
     version: package.version,
   };
-  const postData = JSON.stringify(data);
-  const request = http.request(
-    {
-      hostname: '172.253.93.84',
-      port: 3300,
-      path: '/v1/package/sync',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(postData),
-      },
-    },
-    (res) => {
-      res.on('data', (d) => {
-        process.stdout.write(d);
-        console.log('\n========== sync info end ==========');
-      });
-    },
-  );
-  request.on('error', (e) => {
-    console.error(e);
-  });
-  request.write(postData);
-  request.end();
+  try {
+    console.log(data)
+    const res = await fetch(config.api.syncInfo.path, {
+      method: config.api.syncInfo.method,
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json' }
+    })
+    const resData = await res.json();
+    console.log(resData)
+    wrapLog("sync package info end")
+    return resData.data
+  } catch (error) {
+    console.log(error)
+  }
+
 }
 
-if (!child.status || child.status === null) {
+const start = async () => {
+
   try {
-    syncPackageInfo();
+    const buildDocCode = buildDoc();
+    if (buildDocCode) {
+      return
+    }
+    await zipDoc();
+    const buildCode = buildLowcode();
+
+    if (buildCode) {
+      return;
+    }
+
+    const publishCode = handlePublish()
+
+    if (publishCode) {
+      return;
+    }
+    const packageId = await syncPackageInfo();
+    await uploadDoc(packageId)
   } catch (error) {
-    console.log(error);
+    console.log(error)
   }
+
 }
+
+start();
