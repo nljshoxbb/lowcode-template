@@ -1,23 +1,22 @@
 import * as React from 'react';
 import { forwardRef, ForwardRefRenderFunction } from 'react';
 
-interface ComponentProps {
+export interface <%=exportName%>Props {
   title: string;
   content: string;
 }
-
-const ExampleComponent = (props: ComponentProps, ref: any) => {
+const <%=exportName%>Comp = (props: <%=exportName%>Props, ref: any) => {
   const { title, content, ...others } = props;
 
   return (
-    <div ref={ref} className="ExampleComponent" {...others}>
+    <div ref={ref} className="<%=exportName%>Comp" {...others}>
       <h1>{title}</h1>
-      {content || 'Hello ExampleComponent'}
+      {content || 'Hello <%=exportName%>Comp'}
     </div>
   );
 };
 
-const RefExampleComponent = forwardRef(ExampleComponent as ForwardRefRenderFunction<any, ComponentProps>);
-RefExampleComponent.displayName = 'ExampleComponent';
+const <%=exportName%> = forwardRef(<%=exportName%>Comp as ForwardRefRenderFunction<any, <%=exportName%>Props>);
+<%=exportName%>.displayName = '<%=exportName%>';
 
-export default RefExampleComponent;
+export default <%=exportName%>;
